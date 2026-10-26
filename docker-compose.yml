@@ -1,0 +1,46 @@
+# Versión del formato de Docker Compose
+version: '3.8'
+
+services:
+  # ----------------------------------------------------
+  # SERVICIO 1: La Base de Datos (MySQL)
+  # ----------------------------------------------------
+  db:
+    image: mysql:8.0 # Usamos la imagen oficial de MySQL versión 8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234 # Contraseña del usuario administrador (root)
+      MYSQL_DATABASE: bbdd      # Nombre de la base de datos que se creará automáticamente
+    volumes:
+      - db_data:/var/lib/mysql  # Volumen persistente para que los datos no se borren al apagar el contenedor
+    networks:
+      - backend                 # Conecta este contenedor a nuestra red privada
+
+  # ----------------------------------------------------
+  # SERVICIO 2: El Servidor Web (PHP con Apache)
+  # ----------------------------------------------------
+  web:
+    build: .                    # Le indica a Docker que construya la imagen usando el 'Dockerfile' que hay en esta misma carpeta
+    ports:
+      - "8080:80"               # Conecta el puerto 80 del contenedor (Apache) con el puerto 8080 de tu ordenador (localhost:8080)
+    volumes:
+      - ./html:/var/www/html    # Vincula tu carpeta local 'html' con la carpeta raíz de Apache dentro del contenedor
+    environment:
+      DB_HOST: db               # Variable de entorno útil para indicar que el servidor de BD se llama 'db'
+      DB_NAME: bbdd
+      DB_USER: root
+      DB_PASS: 1234
+    depends_on:
+      - db                      # Asegura que Docker encienda primero la base de datos antes de arrancar el servidor web
+    networks:
+      - backend                 # Lo mete en la misma red privada para que pueda hablar con el servicio 'db'
+
+# ----------------------------------------------------
+# REDES Y VOLÚMENES GLOBALES
+# ----------------------------------------------------
+networks:
+  backend:
+    driver: bridge # Crea una red interna para que 'web' y 'db' se comuniquen de forma segura entre ellos
+
+volumes:
+  db_data:
+    # Declaramos el volumen global para que Docker guarde los datos de MySQL de forma persistente
